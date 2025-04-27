@@ -1,155 +1,15 @@
-# import streamlit as st
-# import hashlib
-# from cryptography.fernet import Fernet
-# import os
-# import sys
-
-# # Fallback-safe rerun function
-# def safe_rerun():
-#     try:
-#         st.experimental_rerun()
-#     except Exception:
-#         st.session_state["rerun_flag"] = True
-#         st.stop()
-
-# # Trigger rerun if flagged
-# if st.session_state.get("rerun_flag"):
-#     st.session_state["rerun_flag"] = False
-#     try:
-#         st.experimental_rerun()
-#     except Exception:
-#         st.stop()
-
-# # Load or generate encryption key
-# KEY_FILE = "key.key"
-# if os.path.exists(KEY_FILE):
-#     with open(KEY_FILE, "rb") as f:
-#         KEY = f.read()
-# else:
-#     KEY = Fernet.generate_key()
-#     with open(KEY_FILE, "wb") as f:
-#         f.write(KEY)
-
-# cipher = Fernet(KEY)
-
-# # Initialize session state
-# if "stored_data" not in st.session_state:
-#     st.session_state.stored_data = {}
-# if "failed_attempts" not in st.session_state:
-#     st.session_state.failed_attempts = 0
-# if "authorized" not in st.session_state:
-#     st.session_state.authorized = True
-
-# # Hash passkey
-# def hash_passkey(passkey):
-#     return hashlib.sha256(passkey.encode()).hexdigest()
-
-# # Encrypt data
-# def encrypt_data(text):
-#     return cipher.encrypt(text.encode()).decode()
-
-# # Decrypt data with error handling
-# def decrypt_data(encrypted_text, passkey):
-#     hashed_passkey = hash_passkey(passkey)
-#     for key, value in st.session_state.stored_data.items():
-#         if value["encrypted_text"] == encrypted_text and value["passkey"] == hashed_passkey:
-#             try:
-#                 decrypted = cipher.decrypt(encrypted_text.encode()).decode()
-#                 st.session_state.failed_attempts = 0
-#                 return decrypted
-#             except Exception:
-#                 return None
-#     st.session_state.failed_attempts += 1
-#     return None
-
-# # App UI
-# st.title("🔐 Secure Data Encryption System")
-
-# # Navigation
-# menu = ["Home", "Store Data", "Retrieve Data", "Login"]
-# choice = st.sidebar.selectbox("Navigation", menu)
-
-# # Home Page
-# if choice == "Home":
-#     st.subheader("🏠 Welcome")
-#     st.write("Use this app to securely **store and retrieve encrypted data** using a secret passkey.")
-
-# # Store Data
-# elif choice == "Store Data":
-#     st.subheader("📥 Store Data Securely")
-#     user_data = st.text_area("Enter Text to Encrypt:")
-#     passkey = st.text_input("Set Your Passkey:", type="password")
-
-#     if st.button("Encrypt & Store"):
-#         if user_data and passkey:
-#             encrypted_text = encrypt_data(user_data)
-#             hashed_passkey = hash_passkey(passkey)
-#             st.session_state.stored_data[encrypted_text] = {
-#                 "encrypted_text": encrypted_text,
-#                 "passkey": hashed_passkey
-#             }
-#             st.success("✅ Your data has been securely stored.")
-#             st.code(encrypted_text, language="text")
-#         else:
-#             st.error("⚠️ Please fill in all fields.")
-
-# # Retrieve Data
-# elif choice == "Retrieve Data":
-#     if not st.session_state.authorized:
-#         st.warning("🔒 Too many failed attempts. Please login.")
-#         safe_rerun()
-
-#     st.subheader("🔓 Retrieve Your Data")
-#     encrypted_text = st.text_area("Paste Your Encrypted Text:")
-#     passkey = st.text_input("Enter Your Passkey:", type="password")
-
-#     if st.button("Decrypt"):
-#         if encrypted_text and passkey:
-#             result = decrypt_data(encrypted_text, passkey)
-#             if result:
-#                 st.success("✅ Decrypted Data:")
-#                 st.code(result, language="text")
-#             else:
-#                 attempts_left = 3 - st.session_state.failed_attempts
-#                 st.error(f"❌ Incorrect passkey! Attempts remaining: {attempts_left}")
-
-#                 if st.session_state.failed_attempts >= 3:
-#                     st.session_state.authorized = False
-#                     st.warning("🚫 Too many failed attempts. Redirecting to Login...")
-#                     safe_rerun()
-#         else:
-#             st.error("⚠️ Both fields are required!")
-
-# # Login Page
-# elif choice == "Login":
-#     st.subheader("🔑 Reauthorization Required")
-#     login_input = st.text_input("Enter Master Password to Continue:", type="password")
-
-#     if st.button("Login"):
-#         if login_input == "admin123":  # Change for real auth
-#             st.session_state.failed_attempts = 0
-#             st.session_state.authorized = True
-#             st.success("✅ Reauthorized. Redirecting...")
-#             safe_rerun()
-#         else:
-#             st.error("❌ Incorrect master password.")
-
-
-
-
-
-
-
-
-
-
 import streamlit as st
 import hashlib
 import json
 import os
 import time
-from cryptography.fernet import Fernet
 
+# Initialize Fernet encryption with error handling
+try:
+    from cryptography.fernet import Fernet
+except ImportError as e:
+    st.error(f"Error importing Fernet: {e}")
+    st.stop()  # Stops execution if Fernet cannot be imported
 
 # ----- Utility Functions -----
 DATA_FILE = "data.json"
@@ -274,8 +134,10 @@ elif choice == "Retrieve Data":
                         st.session_state.failed_attempts = 0
                         match_found = True
                         break
-                    except:
-                        pass
+                    except Exception as e:
+                        st.error(f"Error decrypting data: {e}")
+                        st.session_state.failed_attempts += 1
+                        break
 
             if not match_found:
                 st.session_state.failed_attempts += 1
@@ -300,6 +162,3 @@ elif choice == "Login":
             fake_rerun()
         else:
             st.error("❌ Incorrect master password.")
-            
-            
-            # Admin can log in via "Login" tab to reset lockout.

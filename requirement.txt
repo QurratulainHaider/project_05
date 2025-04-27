@@ -1,2 +1,3 @@
-cryptography
-Streamlit 
+cryptography==44.0.2
+streamlit
+
