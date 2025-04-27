@@ -150,6 +150,7 @@ import os
 import time
 from cryptography.fernet import Fernet
 
+
 # ----- Utility Functions -----
 DATA_FILE = "data.json"
 KEY_FILE = "key.key"
